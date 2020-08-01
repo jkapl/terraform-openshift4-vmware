@@ -3,6 +3,7 @@ provider "vsphere" {
   password             = var.vsphere_password
   vsphere_server       = var.vsphere_server
   allow_unverified_ssl = var.vsphere_allow_insecure
+  version = "< 1.16.0"
 }
 
 # SSH Key for VMs
@@ -27,7 +28,8 @@ module "helper" {
   source             = "./helper"
   datacenter_id      = data.vsphere_datacenter.datacenter.id
   datastore_id       = data.vsphere_datastore.node.id
-  resource_pool_id   = vsphere_resource_pool.pool.id
+  # resource_pool_id   = vsphere_resource_pool.pool.id
+  resource_pool_id   = data.vsphere_resource_pool.pool.id
   folder_id          = vsphere_folder.folder.path
   vminfo             = var.helper
   public_ip          = var.helper_public_ip
@@ -124,7 +126,8 @@ module "bootstrap" {
     module.ignition.module_completed
   ]
   vminfo               = var.bootstrap
-  resource_pool_id     = vsphere_resource_pool.pool.id
+  # resource_pool_id     = vsphere_resource_pool.pool.id
+  resource_pool_id     = data.vsphere_resource_pool.pool.id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
@@ -145,7 +148,8 @@ module "master" {
   ]
   vminfo               = var.master
   vmtype               = "master"
-  resource_pool_id     = vsphere_resource_pool.pool.id
+  # resource_pool_id     = vsphere_resource_pool.pool.id
+  resource_pool_id     = data.vsphere_resource_pool.pool.id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
@@ -166,7 +170,8 @@ module "worker" {
   ]
   vminfo               = var.worker
   vmtype               = "worker"
-  resource_pool_id     = vsphere_resource_pool.pool.id
+  # resource_pool_id     = vsphere_resource_pool.pool.id
+  resource_pool_id     = data.vsphere_resource_pool.pool.id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
@@ -186,7 +191,8 @@ module "storage" {
   ]
   vminfo               = var.storage
   vmtype               = "storage"
-  resource_pool_id     = vsphere_resource_pool.pool.id
+  # resource_pool_id     = vsphere_resource_pool.pool.id
+  resource_pool_id     = data.vsphere_resource_pool.pool.id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
@@ -242,12 +248,19 @@ module "post" {
 }
 
 resource "vsphere_folder" "folder" {
-  path          = var.openshift_cluster_id
+  # path          = var.openshift_cluster_id
+  path          = "Sandbox/cpat-ocp/cpat-tf"
   type          = "vm"
   datacenter_id = data.vsphere_datacenter.datacenter.id
 }
 
-resource "vsphere_resource_pool" "pool" {
-  name                    = var.openshift_cluster_id
-  parent_resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+# resource "vsphere_resource_pool" "pool" {
+#   # name                    = var.openshift_cluster_id
+#   name                    = "/${var.vsphere_datacenter}/host/${var.vsphere_cluster}/Resources/cpat-ocp"
+#   parent_resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+# }
+
+data "vsphere_resource_pool" "pool" {
+  name          = "/${var.vsphere_datacenter}/host/${var.vsphere_cluster}/Resources/${var.vsphere_resource_pool}"
+  datacenter_id = data.vsphere_datacenter.datacenter.id
 }

@@ -28,6 +28,7 @@ resource "vsphere_virtual_machine" "helper" {
     size             = var.vminfo["disk"]
     eagerly_scrub    = data.vsphere_virtual_machine.template.disks.0.eagerly_scrub
     thin_provisioned = data.vsphere_virtual_machine.template.disks.0.thin_provisioned
+    datastore_id     = var.datastore_id
   }
 
   clone {
@@ -48,7 +49,8 @@ resource "vsphere_virtual_machine" "helper" {
       }
 
       ipv4_gateway    = var.public_gateway != "" ? var.public_gateway : var.private_gateway
-      dns_server_list = var.dns_servers
+      # dns_server_list = var.dns_servers
+      dns_server_list = ["172.18.0.10"]
       dns_suffix_list = ["${var.cluster_id}.${var.base_domain}"]
     }
   }
@@ -67,6 +69,7 @@ resource "vsphere_virtual_machine" "helper" {
 
   provisioner "remote-exec" {
     inline = [
+      "set -x",
       "sudo chmod u+x /tmp/terraform_scripts/*.sh",
       "/tmp/terraform_scripts/add-private-ssh-key.sh \"${var.ssh_private_key}\" \"${var.vminfo["username"]}\"",
       "/tmp/terraform_scripts/add-public-ssh-key.sh \"${var.ssh_public_key}\""
@@ -128,7 +131,7 @@ resource "null_resource" "configure" {
   provisioner "remote-exec" {
     inline = [
       "set -x",
-      "sudo yum install epel-release -y",
+      "sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E %rhel).noarch.rpm",
       "sudo yum install git ansible genisoimage -y",
       "test -e /tmp/ocp4-helpernode || git clone ${var.binaries["openshift_helper"]} /tmp/ocp4-helpernode",
       "curl -sL -o /tmp/govc.gz ${var.binaries["govc"]}",
@@ -146,6 +149,7 @@ resource "null_resource" "configure" {
   provisioner "remote-exec" {
     inline = [
       "cd /tmp/ocp4-helpernode",
+      "sudo systemctl stop httpd",
       "sudo ansible-playbook -e @vars.yaml tasks/main.yml"
     ]
   }

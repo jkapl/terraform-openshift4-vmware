@@ -15,6 +15,8 @@ resource "vsphere_virtual_machine" "vm" {
   datastore_id     = var.datastore_id
   folder           = var.folder
 
+  wait_for_guest_ip_timeout = 5
+
   num_cpus = var.vminfo["cpu"]
   memory   = var.vminfo["memory"]
   guest_id = "other3xLinux64Guest"
