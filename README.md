@@ -1,5 +1,5 @@
-# Noel Colon's Terraform OCP4 Automation on VMWare:
-https://github.com/ncolon/terraform-openshift4-vmware
+# Noel Colon's Terraform OCP4 Automation on VMware:
+These are a few notes detailing my experience using Noel Colon's Terraform scripts for automating the installation of OpenShift on VMware. The original repository is located here: https://github.com/ncolon/terraform-openshift4-vmware
 
 ### Key takeaways:
 - Uses Terraform to provision a [Red Hat official helper node](https://github.com/RedHatOfficial/ocp4-helpernode) to:
