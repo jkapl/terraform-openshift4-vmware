@@ -19,12 +19,12 @@ https://github.com/ncolon/terraform-openshift4-vmware
 4. Run the Terraform script according the original repo's instructions.
 
 ### Notes
-- Need to have password-less sudo enabled for the helper node
-- Need to have SELinux enabled for the helper node - permissive mode ok
+- Need to have [password-less sudo](https://stackoverflow.com/questions/10420713/regex-pattern-to-edit-etc-sudoers-file) enabled for the helper node
+- Need to have [SELinux enabled](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/using_selinux/changing-selinux-states-and-modes_using-selinux) for the helper node - permissive mode ok
 - I used RHEL8 for the helper node template OS - with above modifications - but other operating systems should work including CentOS
 - Initially I had an issue with httpd binding to port 80, preventing haproxy from starting - but I added a command to turn off httpd before the Ansible scripts start. This seems to work
-- Had to modify `epel-release install` command
-- Install completes successfully but doesn't get to 'post' step because of ssh keepalive setting. [See here for how to change this](https://patrickmn.com/aside/how-to-keep-alive-ssh-sessions/) in /etc/ssh/ssh_config
+- Had to modify `epel-release install` command in the helper node module. Believe it was an issue with a Red Hat subscription setting
+- Modified the `ssh_config` file in the helper node because of timeouts in the ssh connection during final `openshift-install` commands (waiting for the API server). [See here for how to change this](https://patrickmn.com/aside/how-to-keep-alive-ssh-sessions/) in /etc/ssh/ssh_config
 
 Couple of vSphere specific things/bugs
 - Have to add `var.datastore_id` to the disk section of the helper node Terraform module. I believe this is a vSphere requirement.
