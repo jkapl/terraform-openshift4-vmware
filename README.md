@@ -30,3 +30,7 @@ Couple of vSphere specific things/bugs
 - Have to add `var.datastore_id` to the disk section of the helper node Terraform module. I believe this is a vSphere requirement.
 - vSphere provider has to have `version="< 1.16.0"`
 - Make the resource pool a data object, not a Terraform provisioned resource. In CSP Lab we are using preexisting resource pools, and don't have permission to create new ones.
+
+### Resources
+- [Noel's repo](https://github.com/ncolon/terraform-openshift4-vmware)
+- [Red Hat helper node repo](https://github.com/RedHatOfficial/ocp4-helpernode)
