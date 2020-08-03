@@ -20,13 +20,13 @@ https://github.com/ncolon/terraform-openshift4-vmware
 
 ### Notes
 - Need to have password-less sudo enabled for the helper node
-- Need to have SELinux enabled - permissive mode ok
+- Need to have SELinux enabled for the helper node - permissive mode ok
 - I used RHEL8 for the helper node template OS - with above modifications - but other operating systems should work including CentOS
 - Initially I had an issue with httpd binding to port 80, preventing haproxy from starting - but I added a command to turn off httpd before the Ansible scripts start. This seems to work
 - Had to modify `epel-release install` command
 - Install completes successfully but doesn't get to 'post' step because of ssh keepalive setting. [See here for how to change this](https://patrickmn.com/aside/how-to-keep-alive-ssh-sessions/) in /etc/ssh/ssh_config
 
 Couple of vSphere specific things/bugs
-- Have to add `var.datastore_id` to disk for the helper node Terraform module. I believe this is a vSphere requirement
+- Have to add `var.datastore_id` to the disk section of the helper node Terraform module. I believe this is a vSphere requirement.
 - vSphere provider has to have `version="< 1.16.0"`
-- Make the resource pool a data object, not a Terraform provisioned resource. In CSP Lab we are using preexisting resource pools
+- Make the resource pool a data object, not a Terraform provisioned resource. In CSP Lab we are using preexisting resource pools, and don't have permission to create new ones.
