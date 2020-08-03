@@ -1,74 +1,32 @@
-# terraform-openshift4-vmware
+# Noel Colon's Terraform OCP4 Automation on VMWare:
+https://github.com/ncolon/terraform-openshift4-vmware
 
-Deploy OpenShift 4.3 and later using static IP addresses for master and worker nodes.  Will create a helper node with a webserver to serve ignition files, haproxy for loadbalancing, and DNS for internal cluster name resolution.  It will upload the OpenShift Bare Metal BIOS file and ignition files to the websever root, and will create a bootable ISO for each node with static IP configuration and ignition parameters already set.
+### Key takeaways:
+- Uses Terraform to provision a [Red Hat official helper node](https://github.com/RedHatOfficial/ocp4-helpernode) to:
+  - Provide DNS for the cluster (optional but recommended - requires fewer DNS entries by a sysadmin)
+  - Provide load balancing for the cluster (haproxy)
+  - Provide a web server for ignition config files
+  - Create a bootable ISO for each node with IPs and ignition params preset, and to store the ISO on vSphere for use when VMs are provisioned
+- Uses Terraform to subsequently provision the cluster nodes and run the `openshift-install` commands
 
-## Prereqs
+### How to get started
+1. Go to Noel's [original GitHub repo](https://github.com/ncolon/terraform-openshift4-vmware) to download the Terraform files. It also has detail on each required variable in the `terraform.tfvars` file.
+2. Provision a range of IPs from a sysadmin. These IPs need to be accessible to the public internet so that nodes can download images from quay.io when they begin to boot. In CSP Lab not all IP ranges have routing in place in the OCP network. But that's it - once you have a range set aside for your cluster, you can select arbitrary IPs within that range for each node. No need to provision a VM, get a MAC address, have it assigned a static IP, add a record to the DNS server, etc. This approach uses the helper node for the majority of the DNS records - those that are necessary for in-cluster routing - and sets static IPs for each node using the bootable ISO method mentioned above.
+3. Have a sysadmin create [a couple of DNS records](https://docs.openshift.com/container-platform/4.3/installing/installing_vsphere/installing-vsphere.html#installation-dns-user-infra_installing-vsphere) pointing to the public IP of the helper node:
+  - A or CNAME record for `api-int.<cluster-name>.<base-domain>.`
+  - A or CNAME record for `api.<cluster-name>.<base-domain>.`
+  - A or CNAME record for `*.apps.<cluster-name>.<base-domain>.`
+4. Run the Terraform script according the original repo's instructions.
 
-1. [DNS](https://docs.openshift.com/container-platform/4.3/installing/installing_vsphere/installing-vsphere.html#installation-dns-user-infra_installing-vsphere) needs to be configured ahead of time
-    - If you're using the helper vm for internal DNS, the only external DNS entries required are:
-      - api.cluster_id.domain.com
-      - *.apps.cluster_id.domain.com
-    - Point both of those DNS A or CNAME records to the public IP address of the helper vm.
+### Notes
+- Need to have password-less sudo enabled for the helper node
+- Need to have SELinux enabled - permissive mode ok
+- I used RHEL8 for the helper node template OS - with above modifications - but other operating systems should work including CentOS
+- Initially I had an issue with httpd binding to port 80, preventing haproxy from starting - but I added a command to turn off httpd before the Ansible scripts start. This seems to work
+- Had to modify `epel-release install` command
+- Install completes successfully but doesn't get to 'post' step because of ssh keepalive setting. [See here for how to change this](https://patrickmn.com/aside/how-to-keep-alive-ssh-sessions/) in /etc/ssh/ssh_config
 
-## Installation Process
-
-```bash
-$ git clone https://github.com/ncolon/terraform-openshift4-vmware
-$ cd terraform-openshift4-vmware
-```
-
-Update your `terraform.tfvars` with your environment values.  See `terraform.tfvars.example`
-
-
-```bash
-$ terraform init
-$ terraform plan
-$ terraform apply
-```
-
-## terraform variables
-
-| Variable                     | Description                                                  | Type | Default |
-| ---------------------------- | ------------------------------------------------------------ | ---- | ------- |
-| vsphere_server               | FQDN or IP Address of your vSphere Server                    | string | - |
-| vsphere_username             | vSphere username                                             | string | - |
-| vsphere_password             | vSphere password                                             | string | - |
-| vsphere_allow_insecure       | Allow vSphere self-signed certs                              | string | 1 |
-| vsphere_datacenter           | vSphere Datacenter where OpenShift will be deployed          | string | - |
-| vsphere_cluster              | vSphere Cluster where OpenShift will be deployed             | string | - |
-| vsphere_image_datastore      | vSphere Datastore where bootable ISOS will be stored         | string | - |
-| vsphere_image_datastore_path | vSphere Datastore path where bootable isos will be stored    | string | - |
-| vsphere_node_datastore       | vSphere Datastore for OpenShift nodes                        | string | - |
-| vsphere_private_network      | vSphere private Network for OpenShift nodes                  | string | - |
-| vsphere_public_network       | vSphere public Network for OpenShift nodes                   | string | - |
-| vsphere_folder               | vSphere Folder where VMs will be deployed into               | string | - |
-| vsphere_resource_pool        | vSphere Resource Pool where VMs will be deployed into        | string | - |
-| binaries                     | map with URLs for openshift components                       | map    | See `terraform.tfvars.example` |
-| openshift_base_domain        | Base domain for your OpenShift Cluster                       | string | - |
-| openshift_cluster_id         | Name of your OpenShift cluster.  Cluster will be reachable at `api.$openshift_cluster_id.$openshift_base_domain`. | string | - |
-| openshift_pull_secret        | Path to your OpenShift pull secret.  Download from https://cloud.redhat.com/openshift/install/vsphere/user-provisioned | string | - |
-| openshift_cluster_cidr       | The IP address pools for pods                                | string | 10.128.0.0/14 |
-| openshift_service_cidr       | CIDR for services in the OpenShift SDN                       | string | 172.30.0.0/16 |
-| openshift_host_prefix        | The prefix size to allocate to each node from the CIDR. For example, 24 would allocate 2^8=256 adresses to each node. | string | 23 |
-| private_network_gateway      | Network Gateway for OpenShift Nodes                          | string | - |
-| private_network_netmask      | Network Mask for OpenShift Nodes in numerical form           | string | - |
-| public_network_gateway       | Network Gateway for OpenShift Nodes                          | string | - |
-| public_network_netmask       | Network Mask for OpenShift Nodes in numerical form           | string | - |
-| public_network_nameservers   | Nameservers for OpenShift Nodes                              | list | |
-| coreos_network_device        | Device Interface Name for CoreOS Nodes                       | string | ens192 |
-| helper                       | Map with cpu, memory, disk (etc.) configuration for helper node | map  | See `terraform.tfvars.example` |
-| helper_public_ip             | Public IP address of Helper VM                               | string | - |
-| herlper_private_ip           | Private IP addrress of Helper VM                             | string | - |
-| bootstrap                    | Map with cpu, memory, disk (etc.) configuration for bootstrap node | map  | See `terraform.tfvars.example` |
-| bootstrap_hostname           | Hostname of bootstrap server | string | - |
-| bootstrap_ip                 | IP Address of bootstrap serevr | string | - |
-| master                       | Map with cpu, memory, disk (etc.) configuration for Master Nodes | map  | See `terraform.tfvars.example` |
-| master_hostnames             | Hostnames of Control Plane Nodes | list | - |
-| master_ips                   | IP Addresses of Control Plane Nodes | list | - |
-| worker                       | Map with cpu, memory, disk (etc.) configuration for Worker Nodes | map  | See `terraform.tfvars.example` |
-| worker_hostnames             | Hostnames of Worker Nodes | list | - |
-| worker_ips                   | IP Addresses of Worker Nodes | list | - |
-| storage                      | Map with cpu, memory, disk (etc.) configuration for Storage Node | map  | See `terraform.tfvars.example` |
-| storage_hostnames            | Hostnames of Storage Nodes | list | - |
-| storage_ips                  | IP Addresses of Storage Nodes | list | - |
-| use_helper_for_node_dns      | Use the helper VM as DNS for your cluster | bool | true |
+Couple of vSphere specific things/bugs
+- Have to add `var.datastore_id` to disk for the helper node Terraform module. I believe this is a vSphere requirement
+- vSphere provider has to have `version="< 1.16.0"`
+- Make the resource pool a data object, not a Terraform provisioned resource. In CSP Lab we are using preexisting resource pools
