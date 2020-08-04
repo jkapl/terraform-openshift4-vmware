@@ -28,7 +28,6 @@ resource "vsphere_virtual_machine" "helper" {
     size             = var.vminfo["disk"]
     eagerly_scrub    = data.vsphere_virtual_machine.template.disks.0.eagerly_scrub
     thin_provisioned = data.vsphere_virtual_machine.template.disks.0.thin_provisioned
-    datastore_id     = var.datastore_id
   }
 
   clone {

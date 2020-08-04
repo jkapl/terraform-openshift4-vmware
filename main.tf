@@ -3,7 +3,6 @@ provider "vsphere" {
   password             = var.vsphere_password
   vsphere_server       = var.vsphere_server
   allow_unverified_ssl = var.vsphere_allow_insecure
-  version = "< 1.16.0"
 }
 
 # SSH Key for VMs
