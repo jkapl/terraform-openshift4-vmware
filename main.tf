@@ -5,6 +5,11 @@ provider "vsphere" {
   allow_unverified_ssl = var.vsphere_allow_insecure
 }
 
+locals {
+  resource_pool_id = var.preexisting_resource_pool ? data.vsphere_resource_pool.pool[0].id : vsphere_resource_pool.pool[0].id
+  vsphere_folder = var.preexisting_folder ? data.vsphere_folder.folder[0].path : vsphere_folder.folder[0].path
+}
+
 # SSH Key for VMs
 resource "tls_private_key" "installkey" {
   algorithm = "RSA"
@@ -27,9 +32,9 @@ module "helper" {
   source             = "./helper"
   datacenter_id      = data.vsphere_datacenter.datacenter.id
   datastore_id       = data.vsphere_datastore.node.id
-  # resource_pool_id   = vsphere_resource_pool.pool.id
-  resource_pool_id   = data.vsphere_resource_pool.pool.id
-  folder_id          = vsphere_folder.folder.path
+  resource_pool_id   = local.resource_pool_id
+  # resource_pool_id   = data.vsphere_resource_pool.pool.id
+  folder_id          = local.vsphere_folder
   vminfo             = var.helper
   public_ip          = var.helper_public_ip
   private_ip         = var.helper_private_ip
@@ -126,11 +131,11 @@ module "bootstrap" {
   ]
   vminfo               = var.bootstrap
   # resource_pool_id     = vsphere_resource_pool.pool.id
-  resource_pool_id     = data.vsphere_resource_pool.pool.id
+  resource_pool_id     = local.resource_pool_id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
-  folder               = vsphere_folder.folder.path
+  folder               = local.vsphere_folder
   cluster_id           = var.openshift_cluster_id
   network_id           = data.vsphere_network.private.id
   helper               = var.helper
@@ -148,11 +153,11 @@ module "master" {
   vminfo               = var.master
   vmtype               = "master"
   # resource_pool_id     = vsphere_resource_pool.pool.id
-  resource_pool_id     = data.vsphere_resource_pool.pool.id
+  resource_pool_id     = local.resource_pool_id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
-  folder               = vsphere_folder.folder.path
+  folder               = local.vsphere_folder
   cluster_id           = var.openshift_cluster_id
   network_id           = data.vsphere_network.private.id
   helper               = var.helper
@@ -170,11 +175,11 @@ module "worker" {
   vminfo               = var.worker
   vmtype               = "worker"
   # resource_pool_id     = vsphere_resource_pool.pool.id
-  resource_pool_id     = data.vsphere_resource_pool.pool.id
+  resource_pool_id     = local.resource_pool_id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
-  folder               = vsphere_folder.folder.path
+  folder               = local.vsphere_folder
   cluster_id           = var.openshift_cluster_id
   network_id           = data.vsphere_network.private.id
   helper               = var.helper
@@ -191,11 +196,11 @@ module "storage" {
   vminfo               = var.storage
   vmtype               = "storage"
   # resource_pool_id     = vsphere_resource_pool.pool.id
-  resource_pool_id     = data.vsphere_resource_pool.pool.id
+  resource_pool_id     = local.resource_pool_id
   datastore_id         = data.vsphere_datastore.node.id
   image_datastore_id   = data.vsphere_datastore.images.id
   image_datastore_path = var.vsphere_image_datastore_path
-  folder               = vsphere_folder.folder.path
+  folder               = local.vsphere_folder
   cluster_id           = var.openshift_cluster_id
   network_id           = data.vsphere_network.private.id
   helper               = var.helper
@@ -247,19 +252,26 @@ module "post" {
 }
 
 resource "vsphere_folder" "folder" {
+  count         = var.preexisting_folder ? 0 : 1
   # path          = var.openshift_cluster_id
-  path          = "Sandbox/cpat-ocp/cpat-tf"
+  path          = var.vsphere_folder
   type          = "vm"
   datacenter_id = data.vsphere_datacenter.datacenter.id
 }
 
-# resource "vsphere_resource_pool" "pool" {
-#   # name                    = var.openshift_cluster_id
-#   name                    = "/${var.vsphere_datacenter}/host/${var.vsphere_cluster}/Resources/cpat-ocp"
-#   parent_resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
-# }
+data "vsphere_folder" "folder" {
+  count          = var.preexisting_folder ? 1 : 0
+  path           = var.vsphere_folder
+}
+
+resource "vsphere_resource_pool" "pool" {
+  count                   = var.preexisting_resource_pool ? 0 : 1
+  name                    = var.openshift_cluster_id
+  parent_resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+}
 
 data "vsphere_resource_pool" "pool" {
+  count         = var.preexisting_resource_pool ? 1 : 0
   name          = "/${var.vsphere_datacenter}/host/${var.vsphere_cluster}/Resources/${var.vsphere_resource_pool}"
   datacenter_id = data.vsphere_datacenter.datacenter.id
 }

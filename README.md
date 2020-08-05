@@ -21,15 +21,12 @@ These are a few notes detailing my experience using Noel Colon's Terraform scrip
 ### Notes
 - Need to have [password-less sudo](https://stackoverflow.com/questions/10420713/regex-pattern-to-edit-etc-sudoers-file) enabled for the helper node
 - Need to have [SELinux enabled](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/using_selinux/changing-selinux-states-and-modes_using-selinux) for the helper node - permissive mode ok
-- I used RHEL8 for the helper node template OS - with above modifications - but other operating systems should work including CentOS
+- I used RHEL8 for the helper node template OS - with above modifications - but other operating systems should work including CentOS. If using RHEL8 may need to modify `epel-release install` command in the helper node module. Believe there is an issue with a Red Hat subscription setting
 - Initially I had an issue with httpd binding to port 80, preventing haproxy from starting - but I added a command to turn off httpd before the Ansible scripts start. This seems to work
-- Had to modify `epel-release install` command in the helper node module. Believe it was an issue with a Red Hat subscription setting
 - Modified the `ssh_config` file in the helper node because of timeouts in the ssh connection during final `openshift-install` commands (waiting for the API server). [See here for how to change this](https://patrickmn.com/aside/how-to-keep-alive-ssh-sessions/) in /etc/ssh/ssh_config
 
 Couple of vSphere specific things/bugs
-- Have to add `var.datastore_id` to the disk section of the helper node Terraform module. I believe this is a vSphere requirement.
-- vSphere provider has to have `version="< 1.16.0"`
-- Make the resource pool a data object, not a Terraform provisioned resource. In CSP Lab we are using preexisting resource pools, and don't have permission to create new ones.
+- Can specify if resource pool or folders are preexisting in case permissions are restricted
 
 ### Resources
 - [Noel's repo](https://github.com/ncolon/terraform-openshift4-vmware)
